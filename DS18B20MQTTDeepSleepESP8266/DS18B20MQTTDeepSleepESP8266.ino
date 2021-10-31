@@ -46,14 +46,28 @@ void loop() {
   client.loop();
 
   sensors.requestTemperatures();
-  float temp = sensors.getTempFByIndex(0);
+  int deviceCount = sensors.getDeviceCount();
 
-  Serial.print("Temperature: ");
-  Serial.println(temp);
-  String newTopic = temperature_topic + String(ESP.getChipId(), HEX);
+  Serial.print("Temp Sensor Count:");
+  Serial.println(deviceCount);
 
-  client.publish(newTopic.c_str(), String(temp).c_str(), true);
+  for (int i = 0;  i < deviceCount;  i++) {
+    float temp = sensors.getTempFByIndex(i);
+    DeviceAddress sensor;
+    sensors.getAddress(sensor, i);
 
+    Serial.print("Sensor ID: ");
+    Serial.print(convertAddressToString(sensor));
+    Serial.print(" Temp: ");
+    Serial.println(temp);
+
+    String newTopic = temperature_topic + String(ESP.getChipId(), HEX) + "/" + convertAddressToString(sensor);
+   
+    if (client.connected()) {
+      client.publish(newTopic.c_str(), String(temp).c_str(), true);
+    }
+  }
+ 
   client.loop();
 
   Serial.println("Sleep");
@@ -98,4 +112,13 @@ void reconnect() {
       delay(5000);
     }
   }
+}
+
+String convertAddressToString(DeviceAddress deviceAddress) {
+  String addrToReturn = "";
+  for (uint8_t i = 0; i < 8; i++) {
+    if (deviceAddress[i] < 16) addrToReturn += "0";
+    addrToReturn += String(deviceAddress[i], HEX);
+  }
+  return addrToReturn;
 }
