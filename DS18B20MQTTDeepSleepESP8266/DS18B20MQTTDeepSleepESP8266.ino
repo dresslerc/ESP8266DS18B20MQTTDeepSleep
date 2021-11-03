@@ -21,21 +21,28 @@ DallasTemperature sensors(&oneWire);
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+String chipID;
+char chipIDChar[10];
+
 void setup() {
+
+  wifi_set_sleep_type(NONE_SLEEP_T);
+
+  chipID = String(ESP.getChipId(), HEX);
+  chipID.toCharArray(chipIDChar, chipID.length());
+
   Serial.begin(9600);
-
-  Serial.setTimeout(2000);
-
-  // Wait for serial to initialize.
-  while (!Serial) { }
 
   Serial.println("");
   Serial.print("Device ID: ");
   Serial.println(String(ESP.getChipId(), HEX));
 
-  String(ESP.getChipId(), HEX);
+  WiFi.hostname("ESP-" + chipID);
+
   setup_wifi();
   client.setServer(mqtt_server, 1883);
+
+  sensors.begin();
 }
 
 void loop() {
@@ -62,12 +69,12 @@ void loop() {
     Serial.println(temp);
 
     String newTopic = temperature_topic + String(ESP.getChipId(), HEX) + "/" + convertAddressToString(sensor);
-   
+
     if (client.connected()) {
       client.publish(newTopic.c_str(), String(temp).c_str(), true);
     }
   }
- 
+
   client.loop();
 
   Serial.println("Sleep");
@@ -102,7 +109,7 @@ void reconnect() {
     Serial.print("Attempting MQTT connection...");
 
     // Attempt to connect
-    if (client.connect("ESP8266Client", mqtt_user, mqtt_password)) {
+    if (client.connect(chipIDChar, mqtt_user, mqtt_password)) {
       Serial.println("connected");
     } else {
       Serial.print("failed, rc=");
